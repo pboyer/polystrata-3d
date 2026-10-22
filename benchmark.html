@@ -1,0 +1,324 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>3D Boolean Kernel Benchmark — polystrata-3d vs. manifold-3d &amp; JS CSG Libraries</title>
+    <link rel="stylesheet" href="/demo/style.css" />
+    <style>
+      .bench-shell {
+        display: flex;
+        flex-direction: column;
+        min-height: 100vh;
+        background: var(--bg-app);
+        color: var(--text-primary);
+      }
+      .bench-main {
+        flex: 1;
+        padding: 20px 28px;
+        max-width: 1480px;
+        width: 100%;
+        margin: 0 auto;
+        display: flex;
+        flex-direction: column;
+        gap: 20px;
+        overflow-y: auto;
+      }
+      .bench-toolbar {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        flex-wrap: wrap;
+        gap: 14px;
+        background: var(--bg-panel);
+        border: 1px solid var(--border);
+        border-radius: 10px;
+        padding: 14px 18px;
+      }
+      .bench-toolbar-left {
+        display: flex;
+        align-items: center;
+        gap: 10px;
+        flex-wrap: wrap;
+      }
+      .bench-status {
+        font-family: var(--font-mono);
+        font-size: 12px;
+        color: var(--accent);
+      }
+      .section-banner {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        padding: 12px 16px;
+        border-radius: 10px;
+        background: linear-gradient(90deg, rgba(56, 189, 248, 0.14), rgba(167, 139, 250, 0.08));
+        border: 1px solid rgba(56, 189, 248, 0.35);
+      }
+      .section-banner h2 {
+        font-size: 16px;
+        font-weight: 700;
+        color: var(--text-primary);
+        margin: 0;
+      }
+      .section-banner span {
+        font-family: var(--font-mono);
+        font-size: 11.5px;
+        color: var(--accent);
+      }
+      .lib-cards {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+        gap: 12px;
+      }
+      .lib-card {
+        background: var(--bg-panel);
+        border: 1px solid var(--border);
+        border-radius: 10px;
+        padding: 14px 16px;
+        display: flex;
+        flex-direction: column;
+        gap: 6px;
+      }
+      .lib-card.highlight {
+        border-color: rgba(56, 189, 248, 0.55);
+        background: linear-gradient(180deg, rgba(56, 189, 248, 0.08), rgba(17, 23, 35, 0.95));
+      }
+      .lib-card-header {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+      }
+      .lib-card-name {
+        font-weight: 700;
+        font-size: 14px;
+        color: var(--text-primary);
+      }
+      .lib-card-ver {
+        font-family: var(--font-mono);
+        font-size: 11px;
+        color: var(--text-muted);
+        background: var(--bg-elevated);
+        padding: 2px 6px;
+        border-radius: 4px;
+      }
+      .lib-card-algo {
+        font-size: 11.5px;
+        color: var(--text-secondary);
+        line-height: 1.4;
+      }
+      .lib-card-rep {
+        font-family: var(--font-mono);
+        font-size: 11px;
+        color: var(--accent);
+      }
+      .lib-card-stats {
+        margin-top: 6px;
+        padding-top: 8px;
+        border-top: 1px solid var(--border);
+        display: flex;
+        justify-content: space-between;
+        font-family: var(--font-mono);
+        font-size: 12px;
+      }
+      .bench-grid-section {
+        background: var(--bg-panel);
+        border: 1px solid var(--border);
+        border-radius: 10px;
+        padding: 18px;
+      }
+      .bench-grid-section h2 {
+        font-size: 15px;
+        font-weight: 600;
+        margin-bottom: 4px;
+      }
+      .bench-grid-section p.sub {
+        font-size: 12px;
+        color: var(--text-secondary);
+        margin-bottom: 14px;
+      }
+      .bench-table {
+        width: 100%;
+        border-collapse: collapse;
+        font-size: 12.5px;
+      }
+      .bench-table th,
+      .bench-table td {
+        padding: 9px 12px;
+        text-align: left;
+        border-bottom: 1px solid var(--border);
+      }
+      .bench-table th {
+        font-size: 11px;
+        text-transform: uppercase;
+        letter-spacing: 0.05em;
+        color: var(--text-muted);
+        background: var(--bg-elevated);
+      }
+      .bench-table td.num,
+      .bench-table th.num {
+        text-align: right;
+        font-family: var(--font-mono);
+      }
+      .badge-pass {
+        display: inline-block;
+        padding: 2px 8px;
+        border-radius: 4px;
+        font-family: var(--font-mono);
+        font-size: 11px;
+        font-weight: 600;
+        background: rgba(52, 211, 153, 0.15);
+        color: #34d399;
+        border: 1px solid rgba(52, 211, 153, 0.35);
+      }
+      .badge-warn {
+        display: inline-block;
+        padding: 2px 8px;
+        border-radius: 4px;
+        font-family: var(--font-mono);
+        font-size: 11px;
+        font-weight: 600;
+        background: rgba(251, 191, 36, 0.15);
+        color: #fbbf24;
+        border: 1px solid rgba(251, 191, 36, 0.35);
+      }
+      .badge-fail {
+        display: inline-block;
+        padding: 2px 8px;
+        border-radius: 4px;
+        font-family: var(--font-mono);
+        font-size: 11px;
+        font-weight: 600;
+        background: rgba(248, 113, 113, 0.15);
+        color: #f87171;
+        border: 1px solid rgba(248, 113, 113, 0.35);
+      }
+      .bar-cell {
+        min-width: 160px;
+      }
+      .bar-track {
+        width: 100%;
+        height: 8px;
+        background: var(--bg-elevated);
+        border-radius: 4px;
+        overflow: hidden;
+      }
+      .bar-fill {
+        height: 100%;
+        border-radius: 4px;
+        transition: width 0.25s ease;
+      }
+      .workload-header-row td {
+        background: rgba(24, 33, 50, 0.85);
+        font-weight: 600;
+        color: var(--accent);
+        padding-top: 12px;
+        padding-bottom: 8px;
+      }
+    </style>
+  </head>
+  <body style="overflow: auto;">
+    <div class="bench-shell">
+      <header class="topbar">
+        <div class="brand">
+          <div class="brand-badge">BENCH 3D</div>
+          <div>
+            <h1>3D Planar B-Rep &amp; Mesh CSG Benchmark Suite</h1>
+            <p class="subtitle">
+              Comparing <code>polystrata-3d</code> vs. <code>manifold-3d</code> (C++/WASM),
+              <code>three-bvh-csg</code>, and <code>@jscad/modeling</code>
+            </p>
+          </div>
+        </div>
+
+        <div class="mode-tabs">
+          <a href="/" class="mode-tab" style="text-decoration: none; display: inline-flex; align-items: center;">
+            &larr; Interactive 3D Planar B-Rep Lab
+          </a>
+          <span class="mode-tab active">3D Benchmark Suite</span>
+          <a href="https://github.com/pboyer/polystrata-3d" target="_blank" rel="noopener noreferrer" class="mode-tab" style="text-decoration: none; display: inline-flex; align-items: center;">
+            GitHub &#8599;
+          </a>
+        </div>
+      </header>
+
+      <main class="bench-main">
+        <div class="bench-toolbar">
+          <div class="bench-toolbar-left">
+            <button id="btn-run-all" class="action-btn primary">Run Full 3D Benchmark Suite</button>
+            <button id="btn-run-quick" class="action-btn">Quick Run (25ms / workload)</button>
+            <span id="bench-status" class="bench-status">Initializing WASM engines...</span>
+          </div>
+          <div style="font-size: 12px; color: var(--text-secondary);">
+            CLI Runner: <code>npm run bench</code>
+          </div>
+        </div>
+
+        <div id="section-3d" style="display: flex; flex-direction: column; gap: 20px;">
+          <div class="section-banner">
+            <h2>3D Planar B-Rep &amp; Mesh CSG Benchmark Suite</h2>
+            <span>polystrata-3d vs. manifold-3d (v3.5.4 WASM) &bull; three-bvh-csg &bull; @jscad/modeling</span>
+          </div>
+
+          <div id="lib-cards-3d" class="lib-cards"></div>
+
+          <section class="bench-grid-section">
+            <h2>3D Adversarial Glancing &amp; Degeneracy Stress Suite (24 Scenarios &times; 3 CSG Ops = 72 3D Boolean Ops)</h2>
+            <p class="sub">
+              Tests kissing UV-spheres, shallow glancing cylinders (1.75&deg;), cone apices grazing planar box faces,
+              interlocking toroids, multi-hole extrusions, and non-manifold dangling fins. Audits every output mesh for
+              <strong>watertight 2-manifoldness (<code>&part;<sub>1</sub>&part;<sub>2</sub> = 0</code>, zero unmatched half-edges)</strong>
+              and <strong>exact 3D Inclusion-Exclusion Volume Identities</strong>:
+              <code>Vol(A &cup; B) + Vol(A &cap; B) = Vol(A) + Vol(B)</code> and
+              <code>Vol(A \ B) + Vol(A &cap; B) = Vol(A)</code>.
+            </p>
+            <table class="bench-table">
+              <thead>
+                <tr>
+                  <th>Library</th>
+                  <th>Representation</th>
+                  <th class="num">Throughput</th>
+                  <th class="num">Total Time</th>
+                  <th class="num">Watertight 2-Manifold</th>
+                  <th class="num">Volume Identity</th>
+                  <th class="num">Fully Valid</th>
+                  <th class="num">Crashes</th>
+                  <th>Topological Verdict</th>
+                </tr>
+              </thead>
+              <tbody id="stress-3d-tbody"></tbody>
+            </table>
+          </section>
+
+          <section class="bench-grid-section">
+            <h2>3D Workload-by-Workload Performance, Face Unification &amp; Manifold Audit (10 Workloads)</h2>
+            <p class="sub">
+              Each sample executes <code>union3D</code>, <code>intersect3D</code>, and <code>difference3D</code>.
+              Compare <strong>Out Faces / Tris</strong> (exact coplanar polygon unification vs. triangulated mesh splitting),
+              <strong>Volume Identity Error</strong> (<code>f64</code> vs. <code>f32</code> vertex quantization), and
+              <strong>Unmatched Half-Edges</strong> (<code>0</code> = closed 2-manifold; <code>&gt;0</code> = T-junction cracks).
+            </p>
+            <table class="bench-table">
+              <thead>
+                <tr>
+                  <th>Library</th>
+                  <th class="num">Ops / sec</th>
+                  <th class="bar-cell">Relative Speed</th>
+                  <th class="num">Mean (ms)</th>
+                  <th class="num">p50 (ms)</th>
+                  <th class="num">Out Faces / Tris</th>
+                  <th class="num">Vol Identity Err</th>
+                  <th class="num">Unmatched Edges</th>
+                  <th>Status</th>
+                </tr>
+              </thead>
+              <tbody id="workload-3d-tbody"></tbody>
+            </table>
+          </section>
+        </div>
+      </main>
+    </div>
+
+    <script type="module" src="/demo/benchmark-page.ts"></script>
+  </body>
+</html>

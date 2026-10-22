@@ -1,0 +1,76 @@
+{
+  "name": "polystrata-3d",
+  "version": "0.1.0",
+  "type": "module",
+  "license": "MIT",
+  "description": "High-performance 3D Planar B-Rep Boolean operations, coplanar face unification, and topological healing kernel powered by Rust/WebAssembly",
+  "homepage": "https://polystrata3d.ptrbyr.com",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/pboyer/polystrata-3d.git"
+  },
+  "bugs": {
+    "url": "https://github.com/pboyer/polystrata-3d/issues"
+  },
+  "keywords": [
+    "3d-boolean",
+    "csg",
+    "brep",
+    "mesh-boolean",
+    "boolean-operations",
+    "geometry",
+    "computational-geometry",
+    "cad",
+    "wasm",
+    "3d"
+  ],
+  "sideEffects": false,
+  "files": [
+    "dist",
+    "README.md",
+    "LICENSE"
+  ],
+  "main": "./dist/index.cjs",
+  "module": "./dist/index.js",
+  "types": "./dist/index.d.ts",
+  "exports": {
+    ".": {
+      "import": {
+        "types": "./dist/index.d.ts",
+        "default": "./dist/index.js"
+      },
+      "require": {
+        "types": "./dist/index.d.cts",
+        "default": "./dist/index.cjs"
+      }
+    },
+    "./package.json": "./package.json"
+  },
+  "engines": {
+    "node": ">=18.0.0"
+  },
+  "scripts": {
+    "dev": "vite",
+    "build:wasm": "cargo build --target wasm32-unknown-unknown --release && node -e \"const fs=require('fs');const b=fs.readFileSync('target/wasm32-unknown-unknown/release/polystrata_3d.wasm');fs.writeFileSync('src/wasm-bytes.ts','// Auto-generated from crates/polystrata-3d-wasm\\nexport const WASM_BASE64: string = \\\"'+b.toString('base64')+'\\\";\\n');\"",
+    "build": "vite build --config vite.lib.config.ts && tsc -p tsconfig.build.json && node -e \"require('fs').copyFileSync('dist/index.d.ts','dist/index.d.cts')\"",
+    "build:demo": "vite build",
+    "preview": "vite preview",
+    "bench": "tsx bench/run.ts",
+    "test": "vitest run",
+    "typecheck": "tsc --noEmit",
+    "prepublishOnly": "npm run build && npm test"
+  },
+  "devDependencies": {
+    "@jscad/modeling": "^2.13.0",
+    "@types/node": "^26.6.5",
+    "@types/three": "^0.186.0",
+    "manifold-3d": "^3.5.4",
+    "three": "^0.186.1",
+    "three-bvh-csg": "^0.0.18",
+    "three-mesh-bvh": "^0.9.16",
+    "tsx": "^4.23.15",
+    "typescript": "^5.6.3",
+    "vite": "^5.4.11",
+    "vitest": "^2.1.8"
+  }
+}

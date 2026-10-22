@@ -1,0 +1,8 @@
+node_modules/
+dist/
+dist-demo/
+.vercel/
+target/
+crates/polystrata-3d-wasm/target/
+*.tsbuildinfo
+.vercel

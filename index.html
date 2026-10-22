@@ -1,0 +1,246 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>polystrata-3d — 3D Planar B-Rep Stratified Tolerance Complex Kernel</title>
+    <link rel="stylesheet" href="/demo/style.css" />
+  </head>
+  <body>
+    <div class="app-shell">
+      <!-- Top Header -->
+      <header class="topbar">
+        <div class="brand">
+          <div class="brand-badge">POLYSTRATA 3D</div>
+          <div>
+            <h1>polystrata-3d &mdash; 3D Planar B-Rep Boolean &amp; Healing Kernel</h1>
+            <p class="subtitle">
+              Coupled 3D Stratified Tolerance Complex &bull; Radial CoFace Volume Extraction &bull; Coplanar Face Unification
+            </p>
+          </div>
+        </div>
+
+        <div class="mode-tabs" role="tablist">
+          <button id="tab-3d" class="mode-tab active" role="tab" aria-selected="true">
+            3D Planar B-Rep Lab (31 Scenarios)
+          </button>
+          <a href="/benchmark.html" class="mode-tab" style="text-decoration: none; display: inline-flex; align-items: center;">
+            3D Benchmark Suite (vs. Manifold) &rarr;
+          </a>
+          <a href="https://github.com/pboyer/polystrata-3d" target="_blank" rel="noopener noreferrer" class="mode-tab" style="text-decoration: none; display: inline-flex; align-items: center;">
+            GitHub &#8599;
+          </a>
+        </div>
+
+        <div class="topbar-metrics">
+          <div class="metric-pill">
+            <span class="metric-label">Solve Time</span>
+            <span id="metric-time" class="metric-value">0.00 ms</span>
+          </div>
+          <div class="metric-pill">
+            <span class="metric-label">Canonical V / E</span>
+            <span id="metric-ve" class="metric-value">0 / 0</span>
+          </div>
+          <div class="metric-pill">
+            <span class="metric-label">Faces / Holes</span>
+            <span id="metric-loops" class="metric-value">0 F</span>
+          </div>
+          <div class="metric-pill">
+            <span class="metric-label">Enclosed Volume</span>
+            <span id="metric-area" class="metric-value">0.00</span>
+          </div>
+        </div>
+      </header>
+
+      <div class="main-layout">
+        <!-- Left Sidebar: 3D Scenarios & Overlays -->
+        <aside class="sidebar left-sidebar">
+          <div id="panel-3d" class="sidebar-panel">
+            <div class="section-header">
+              <h2>3D Planar B-Rep Scenarios</h2>
+              <span id="badge-3d-count" class="badge-hint">31 presets</span>
+            </div>
+            <div id="filter-3d-categories" class="QuickTolRow" style="flex-wrap: wrap; gap: 4px;">
+              <button data-cat="all" class="btn-chip active">All (31)</button>
+              <button data-cat="prisms" class="btn-chip">Prisms</button>
+              <button data-cat="spheres" class="btn-chip">Spheres</button>
+              <button data-cat="cylinders" class="btn-chip">Cylinders</button>
+              <button data-cat="cones" class="btn-chip">Cones</button>
+              <button data-cat="toroids" class="btn-chip">Toroids</button>
+              <button data-cat="open" class="btn-chip">Open / Flaps</button>
+            </div>
+            <div id="example-3d-list" class="example-list example-3d-scroll"></div>
+
+            <div class="section-header">
+              <h2>3D Viewport Overlays</h2>
+            </div>
+            <div class="control-group layer-toggles">
+              <label class="checkbox-row">
+                <input id="chk-3d-inputs" type="checkbox" checked />
+                <span>Ghosted Input Solids A &amp; B</span>
+              </label>
+              <label class="checkbox-row">
+                <input id="chk-3d-shaded" type="checkbox" checked />
+                <span>Shaded B-Rep Faces</span>
+              </label>
+              <label class="checkbox-row">
+                <input id="chk-3d-edges" type="checkbox" checked />
+                <span>B-Rep Outer Loops &amp; Interior Holes</span>
+              </label>
+              <label class="checkbox-row">
+                <input id="chk-3d-normals" type="checkbox" />
+                <span>Outward Face Normal Vectors</span>
+              </label>
+              <label class="checkbox-row">
+                <input id="chk-3d-color-face" type="checkbox" />
+                <span>Distinct Palette per Unified Face</span>
+              </label>
+            </div>
+          </div>
+        </aside>
+
+        <!-- Center Interactive 3D Canvas -->
+        <main class="canvas-stage">
+          <div class="canvas-toolbar">
+            <div class="toolbar-left">
+              <span id="active-scenario-title" class="scenario-title">Scenario</span>
+              <span class="toolbar-divider">|</span>
+              <span class="drag-hint">
+                Left-Drag to orbit 3D camera &bull; Scroll to zoom &bull; Shift+Drag or Middle-Drag to pan
+              </span>
+            </div>
+            <div class="toolbar-right">
+              <button id="btn-reset-geometry" class="btn btn-sm">Reset Transform</button>
+              <button id="btn-fit-view" class="btn btn-sm">Reset Camera</button>
+            </div>
+          </div>
+
+          <div class="canvas-container">
+            <canvas id="kernel-canvas"></canvas>
+
+            <!-- Legend Overlay -->
+            <div class="canvas-legend">
+              <span class="legend-item"><i class="dot body-a"></i> Solid A Wireframe</span>
+              <span class="legend-item"><i class="dot body-b"></i> Solid B Wireframe</span>
+              <span class="legend-item"><i class="dot out-shell"></i> Unified Outer Face Loop</span>
+              <span class="legend-item"><i class="dot out-hole"></i> Interior Face Hole Loop</span>
+            </div>
+          </div>
+
+          <div id="scenario-description" class="scenario-footer"></div>
+        </main>
+
+        <!-- Right Sidebar: 6-DOF Transform, Boolean Controls & 3D Invariant Diagnostics -->
+        <aside class="sidebar right-sidebar">
+          <div id="panel-3d-transform" class="sidebar-panel">
+            <div class="section-header">
+              <h2>Transform Solid B (Live)</h2>
+              <button id="btn-3d-reset-transform" class="btn-inline">Reset</button>
+            </div>
+            <div class="control-group">
+              <label class="control-label">
+                <span>Translate X (&Delta;x)</span>
+                <span id="val-3d-dx" class="mono-val">0.00</span>
+              </label>
+              <input id="slider-3d-dx" type="range" min="-6" max="6" step="0.05" value="0" />
+
+              <label class="control-label">
+                <span>Translate Y (&Delta;y)</span>
+                <span id="val-3d-dy" class="mono-val">0.00</span>
+              </label>
+              <input id="slider-3d-dy" type="range" min="-6" max="6" step="0.05" value="0" />
+
+              <label class="control-label">
+                <span>Translate Z (&Delta;z)</span>
+                <span id="val-3d-dz" class="mono-val">0.00</span>
+              </label>
+              <input id="slider-3d-dz" type="range" min="-6" max="6" step="0.05" value="0" />
+
+              <label class="control-label">
+                <span>Glancing Tilt X (&theta;<sub>x</sub>)</span>
+                <span id="val-3d-rx" class="mono-val">0.00&deg;</span>
+              </label>
+              <input id="slider-3d-rx" type="range" min="-45" max="45" step="0.25" value="0" />
+
+              <label class="control-label">
+                <span>Glancing Tilt Y (&theta;<sub>y</sub>)</span>
+                <span id="val-3d-ry" class="mono-val">0.00&deg;</span>
+              </label>
+              <input id="slider-3d-ry" type="range" min="-45" max="45" step="0.25" value="0" />
+
+              <label class="control-label">
+                <span>Rotate Z (&theta;<sub>z</sub>)</span>
+                <span id="val-3d-rot" class="mono-val">0&deg;</span>
+              </label>
+              <input id="slider-3d-rot" type="range" min="-90" max="90" step="1" value="0" />
+
+              <label class="control-label" style="margin-top: 4px;">
+                <span>Curved Quadric Facet Density</span>
+              </label>
+              <div class="segmented-row" id="detail-3d-selector">
+                <button data-scale="0.75" class="seg-btn">Coarse</button>
+                <button data-scale="1" class="seg-btn active">Standard</button>
+                <button data-scale="1.5" class="seg-btn">Fine</button>
+              </div>
+            </div>
+          </div>
+
+          <div class="sidebar-panel">
+            <div class="section-header">
+              <h2>3D Boolean &amp; Winding</h2>
+            </div>
+
+            <div class="control-group">
+              <label class="control-label">3D Boolean Operation</label>
+              <div class="op-grid" id="op-selector">
+                <button data-op="union" class="op-btn active">Union (A &cup; B)</button>
+                <button data-op="intersect" class="op-btn">Intersect (A &cap; B)</button>
+                <button data-op="difference" class="op-btn">Diff (A \ B)</button>
+                <button data-op="xor" class="op-btn">XOR (A &oplus; B)</button>
+                <button data-op="heal" class="op-btn">Heal Soup</button>
+              </div>
+            </div>
+
+            <div class="control-group">
+              <label class="control-label">3D Winding Rule</label>
+              <div class="segmented-row" id="winding-selector">
+                <button data-rule="positive" class="seg-btn active">positive</button>
+                <button data-rule="nonZero" class="seg-btn">nonZero</button>
+                <button data-rule="evenOdd" class="seg-btn">evenOdd</button>
+              </div>
+            </div>
+
+            <div class="section-header">
+              <h2>Tolerance &amp; Simplification</h2>
+            </div>
+
+            <div class="control-group">
+              <label class="control-label">
+                <span>Snap Tolerance (r<sub>0</sub>)</span>
+                <span id="val-snap-tol" class="mono-val">Auto</span>
+              </label>
+              <input id="slider-snap-tol" type="range" min="-9" max="0.5" step="0.05" value="-9" />
+              <div class="QuickTolRow">
+                <button id="btn-tol-auto" class="btn-chip active">Auto (10<sup>-9</sup> L)</button>
+                <button id="btn-tol-micro" class="btn-chip">10<sup>-4</sup></button>
+                <button id="btn-tol-coarse" class="btn-chip">0.25</button>
+              </div>
+
+              <label class="checkbox-row">
+                <input id="chk-simplify-collinear" type="checkbox" checked />
+                <span>Simplify Collinear Degree-2 Vertices</span>
+              </label>
+            </div>
+
+            <div class="section-header">
+              <h2>3D B-Rep Invariant Audit</h2>
+            </div>
+            <div id="pipeline-diagnostics" class="diagnostics-box"></div>
+          </div>
+        </aside>
+      </div>
+    </div>
+
+    <script type="module" src="/demo/main.ts"></script>
+  </body>
+</html>
