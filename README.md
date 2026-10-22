@@ -1,6 +1,6 @@
 # polystrata-3d
 
-**[Interactive 3D Planar B-Rep Lab](https://polystrata3d.ptrbyr.com)** &bull; **[Live 3D Benchmark Suite](https://polystrata3d.ptrbyr.com/benchmark)** &bull; **[npm](https://www.npmjs.com/package/polystrata-3d)** &bull; **[crates.io](https://crates.io/crates/polystrata-3d)** &bull; **[docs.rs](https://docs.rs/polystrata-3d)**
+**[Interactive 3D Planar B-Rep Lab](https://polystrata-3d.ptrbyr.com)** &bull; **[Live 3D Benchmark Suite](https://polystrata-3d.ptrbyr.com/benchmark)** &bull; **[npm](https://www.npmjs.com/package/polystrata-3d)** &bull; **[crates.io](https://crates.io/crates/polystrata-3d)** &bull; **[docs.rs](https://docs.rs/polystrata-3d)**
 
 `polystrata-3d` is a high-performance, topologically robust **3D Planar Boundary-Representation (B-Rep) Boolean & Healing kernel** implemented in Rust and compiled to WebAssembly.
 
@@ -39,11 +39,11 @@ import {
   createBox,
   extrudePolygon,
   transformSolid,
-  initPolystrata3D,
+  initpolystrata-3d,
 } from "polystrata-3d";
 
 // Optional on Node.js / Bun / Deno / Web Workers; recommended once at startup on browser main threads:
-await initPolystrata3D();
+await initpolystrata-3d();
 
 const boxA = createBox([-5, -5, -5], [5, 5, 5]);
 const boxB = createBox([0, 0, 0], [8, 8, 8]);
