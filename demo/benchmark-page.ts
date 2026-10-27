@@ -5,12 +5,13 @@ import {
   runFullBenchmarkSuite3D,
 } from "../bench/runner3d.js";
 import { initPolystrata3D } from "../src/index.js";
+import { initTheme } from "./theme.js";
 
 const LIB_COLORS: Record<string, string> = {
-  "polystrata-3d": "#38bdf8",
-  "manifold-3d": "#f472b6",
-  "three-bvh-csg": "#fbbf24",
-  "jscad-modeling": "#34d399",
+  "polystrata-3d": "#3f6f9f",
+  "manifold-3d": "#b4607a",
+  "three-bvh-csg": "#c39130",
+  "jscad-modeling": "#6f8a3c",
 };
 
 const statusEl = document.getElementById("bench-status")!;
@@ -37,7 +38,7 @@ function renderReport3D(report: FullBenchmarkReport3D): void {
     card.className = `lib-card ${lib.id === "polystrata-3d" ? "highlight" : ""}`;
     card.innerHTML = `
       <div class="lib-card-header">
-        <span class="lib-card-name" style="color: ${LIB_COLORS[lib.id] ?? "#f1f5f9"}">${lib.name}</span>
+        <span class="lib-card-name" style="color: ${LIB_COLORS[lib.id] ?? "inherit"}">${lib.name}</span>
         <span class="lib-card-ver">v${lib.version}</span>
       </div>
       <div class="lib-card-rep">${lib.representation}</div>
@@ -93,7 +94,7 @@ function renderReport3D(report: FullBenchmarkReport3D): void {
 
     for (const r of summary.results) {
       const pct = Math.max(2, Math.min(100, (r.opsPerSec / maxOps) * 100));
-      const color = LIB_COLORS[r.libraryId] ?? "#38bdf8";
+      const color = LIB_COLORS[r.libraryId] ?? "#3f6f9f";
       const meshStr =
         r.unionFaceCount > 0 || r.unionTriangleCount > 0
           ? `${r.unionFaceCount}F / ${r.unionTriangleCount}T`
@@ -159,4 +160,5 @@ async function initPage(): Promise<void> {
   }
 }
 
+initTheme();
 initPage();

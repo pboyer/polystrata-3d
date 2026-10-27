@@ -13,6 +13,7 @@ import {
   transformSolid3D,
   union3D,
 } from "../src/index.js";
+import { alpha, palette } from "./theme.js";
 
 export type Scenario3DCategory =
   | "prisms"
@@ -1124,19 +1125,6 @@ export interface RenderOptions3D {
   colorByFace: boolean;
 }
 
-const FACE_PALETTE = [
-  "#38bdf8",
-  "#34d399",
-  "#a78bfa",
-  "#fbbf24",
-  "#f472b6",
-  "#60a5fa",
-  "#4ade80",
-  "#fb923c",
-  "#2dd4bf",
-  "#c084fc",
-];
-
 export function projectPoint3D(
   p: Point3D,
   cam: Camera3D,
@@ -1355,7 +1343,7 @@ function getWebGLBRepContext(): WebGLBRepContext | null {
       float rim = pow(clamp(1.0 - abs(nzCam), 0.0, 1.0), 2.4) * 0.14;
 
       float shade = 0.42 + 0.44 * key + 0.14 * fill + 0.10 * hemi;
-      vec3 col = v_color * shade + vec3(rim * 0.7, rim * 0.85, rim);
+      vec3 col = v_color * shade + vec3(rim);
       gl_FragColor = vec4(clamp(col, 0.0, 1.0), 1.0);
     }
   `;
@@ -1449,6 +1437,8 @@ function renderWebGL3DPass(
   gl.enable(gl.BLEND);
   gl.blendFunc(gl.SRC_ALPHA, gl.ONE_MINUS_SRC_ALPHA);
 
+  const pal = palette();
+
   // 1. Hardware Z-buffered shaded B-Rep surface triangles
   if (opts.showShadedFaces && result.triangles.length > 0) {
     const triCount = result.triangles.length;
@@ -1457,17 +1447,9 @@ function renderWebGL3DPass(
 
     for (let i = 0; i < triCount; i++) {
       const t = result.triangles[i]!;
-      let r: number;
-      let g: number;
-      let b: number;
-      if (opts.colorByFace) {
-        const hex = FACE_PALETTE[t.faceIndex % FACE_PALETTE.length]!;
-        [r, g, b] = hexToRgb01(hex);
-      } else {
-        r = (110 + 75 * t.normal.x) / 255;
-        g = (155 + 70 * t.normal.y) / 255;
-        b = (205 + 45 * t.normal.z) / 255;
-      }
+      const [r, g, b] = opts.colorByFace
+        ? hexToRgb01(pal.faces[t.faceIndex % pal.faces.length]!)
+        : pal.material;
 
       for (const pt of [t.a, t.b, t.c]) {
         data[c++] = pt.x;
@@ -1585,12 +1567,12 @@ function renderWebGL3DPass(
     gl.depthMask(false);
 
     // Crisp visible front B-Rep edges & hole loops (depth <= surface)
-    drawBuffer(outerSegs, gl.LINES, [0.90, 0.96, 1.0, 1.0], gl.LEQUAL);
-    drawBuffer(holeSegs, gl.LINES, [1.0, 0.36, 0.50, 1.0], gl.LEQUAL);
+    drawBuffer(outerSegs, gl.LINES, pal.edge, gl.LEQUAL);
+    drawBuffer(holeSegs, gl.LINES, pal.hole, gl.LEQUAL);
 
     // Depth-tested canonical 0-strata vertices
-    drawBuffer(outerPts, gl.POINTS, [0.22, 0.74, 0.97, 1.0], gl.LEQUAL, true, 5.5);
-    drawBuffer(holePts, gl.POINTS, [0.98, 0.44, 0.52, 1.0], gl.LEQUAL, true, 6.2);
+    drawBuffer(outerPts, gl.POINTS, pal.edge, gl.LEQUAL, true, 4.5);
+    drawBuffer(holePts, gl.POINTS, pal.hole, gl.LEQUAL, true, 5.0);
 
     gl.depthMask(true);
     gl.depthFunc(gl.LEQUAL);
@@ -1608,25 +1590,14 @@ export function renderBRep3DScene(
   cam: Camera3D,
   opts: RenderOptions3D,
 ): void {
+  const pal = palette();
   ctx.clearRect(0, 0, width, height);
-
-  // Subtle radial background glow
-  const grad = ctx.createRadialGradient(
-    width * 0.5,
-    height * 0.5,
-    20,
-    width * 0.5,
-    height * 0.5,
-    Math.max(width, height) * 0.65,
-  );
-  grad.addColorStop(0, "#131b2e");
-  grad.addColorStop(1, "#090d16");
-  ctx.fillStyle = grad;
+  ctx.fillStyle = pal.bg;
   ctx.fillRect(0, 0, width, height);
 
   // Draw reference XY ground grid at z = -6
   ctx.save();
-  ctx.strokeStyle = "rgba(148, 163, 184, 0.12)";
+  ctx.strokeStyle = pal.grid;
   ctx.lineWidth = 1;
   const gridZ = -6;
   for (let g = -10; g <= 10; g += 2) {
@@ -1648,8 +1619,8 @@ export function renderBRep3DScene(
 
   // Ghosted input wireframes (Solid A & Solid B) — drawn behind the WebGL pass so they are naturally occluded by the solid
   if (opts.showInputWireframe) {
-    drawWireSolid(ctx, solidA, cam, width, height, "rgba(56, 189, 248, 0.28)", [4, 4]);
-    drawWireSolid(ctx, solidB, cam, width, height, "rgba(251, 146, 60, 0.42)", [4, 4]);
+    drawWireSolid(ctx, solidA, cam, width, height, alpha(pal.bodyA, 0.5), [4, 4]);
+    drawWireSolid(ctx, solidB, cam, width, height, alpha(pal.bodyB, 0.55), [4, 4]);
   }
 
   // Hardware Z-buffered WebGL rendering of shaded B-Rep faces and depth-tested B-Rep topology loops
@@ -1663,8 +1634,8 @@ export function renderBRep3DScene(
   // Draw outward face normal vectors at each face's outer centroid
   if (opts.showNormals) {
     ctx.save();
-    ctx.strokeStyle = "#facc15";
-    ctx.fillStyle = "#facc15";
+    ctx.strokeStyle = pal.normal;
+    ctx.fillStyle = pal.normal;
     ctx.lineWidth = 1.5;
     for (const face of result.solid.faces) {
       if (face.outer.length === 0) continue;

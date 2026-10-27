@@ -16,6 +16,7 @@ import {
   type Scenario3D,
   type Scenario3DCategory,
 } from "./brep3d-lab.js";
+import { initTheme, onThemeChange } from "./theme.js";
 
 type DemoOp3D = BooleanOp | "heal";
 
@@ -128,6 +129,8 @@ function syncControlsFromState(): void {
     const el = card as HTMLElement;
     el.classList.toggle("active", el.dataset.id === currentScenario3D.id);
   });
+
+  (document.getElementById("scenario-select") as HTMLSelectElement).value = currentScenario3D.id;
 }
 
 function recomputeAndRender(): void {
@@ -160,7 +163,7 @@ function recomputeAndRender(): void {
   document.getElementById("metric-ve")!.textContent = `${res.vertexCount} V / ${res.edgeCount} E`;
   document.getElementById("metric-loops")!.textContent =
     `${res.solid.faces.length} F (${audit.holeLoopCount} holes)`;
-  document.getElementById("metric-area")!.textContent = `Vol ${res.totalVolume.toFixed(1)}`;
+  document.getElementById("metric-area")!.textContent = res.totalVolume.toFixed(1);
 
   const diagEl = document.getElementById("pipeline-diagnostics")!;
   diagEl.innerHTML = `
@@ -168,16 +171,60 @@ function recomputeAndRender(): void {
     <div class="diag-row"><span>3D Surface Area:</span><span class="diag-val">${res.totalSurfaceArea.toFixed(3)}</span></div>
     <div class="diag-row"><span>Canonical 0/1-Strata:</span><span class="diag-val">${res.vertexCount} V / ${res.edgeCount} E</span></div>
     <div class="diag-row"><span>Unified Planar 2-Strata:</span><span class="diag-val">${res.solid.faces.length} faces (${audit.holeLoopCount} holes)</span></div>
-    <div class="diag-row"><span>Unmatched Half-Edges:</span><span class="diag-val" style="color:${res.unmatchedHalfEdgeCount === 0 ? "#34d399" : "#fb7185"}">${res.unmatchedHalfEdgeCount} (${res.unmatchedHalfEdgeCount === 0 ? "2-Manifold ✓" : "Open"})</span></div>
+    <div class="diag-row"><span>Unmatched Half-Edges:</span><span class="diag-val ${res.unmatchedHalfEdgeCount === 0 ? "ok" : "bad"}">${res.unmatchedHalfEdgeCount} (${res.unmatchedHalfEdgeCount === 0 ? "2-Manifold ✓" : "Open"})</span></div>
     <div class="diag-row"><span>Euler &chi; = V&minus;E+F&minus;H:</span><span class="diag-val">${audit.eulerCharacteristic}</span></div>
     <div class="diag-row"><span>Vol(A&cup;B)+Vol(A&cap;B):</span><span class="diag-val">${(audit.volUnion + audit.volIntersect).toFixed(2)}</span></div>
-    <div class="diag-row"><span>Inclusion-Exclusion Err:</span><span class="diag-val" style="color:${audit.inclusionExclusionPass ? "#34d399" : "#fb7185"}">${audit.inclusionExclusionError.toExponential(2)} ${audit.inclusionExclusionPass ? "✓" : ""}</span></div>
+    <div class="diag-row"><span>Inclusion-Exclusion Err:</span><span class="diag-val ${audit.inclusionExclusionPass ? "ok" : "bad"}">${audit.inclusionExclusionError.toExponential(2)} ${audit.inclusionExclusionPass ? "✓" : ""}</span></div>
   `;
 
   renderCanvas();
 }
 
 function setupUI(): void {
+  function select3DScenario(s3d: Scenario3D): void {
+    currentScenario3D = s3d;
+    currentOp = s3d.defaultOp;
+    transform3D = {
+      dx: 0,
+      dy: 0,
+      dz: 0,
+      rxDeg: 0,
+      ryDeg: 0,
+      rotDeg: 0,
+      detailScale: transform3D.detailScale,
+    };
+    sync3DTransformSliders();
+    syncControlsFromState();
+    recomputeAndRender();
+  }
+
+  // Compact scenario picker (mobile), grouped by category.
+  const scenarioSelect = document.getElementById("scenario-select") as HTMLSelectElement;
+  const groups = new Map<string, HTMLOptGroupElement>();
+  for (const s3d of DEMO_SCENARIOS_3D) {
+    let group = groups.get(s3d.category);
+    if (!group) {
+      group = document.createElement("optgroup");
+      group.label = s3d.category[0]!.toUpperCase() + s3d.category.slice(1);
+      groups.set(s3d.category, group);
+      scenarioSelect.appendChild(group);
+    }
+    group.appendChild(new Option(s3d.title, s3d.id));
+  }
+  const selectScenarioAt = (index: number) => {
+    const n = DEMO_SCENARIOS_3D.length;
+    select3DScenario(DEMO_SCENARIOS_3D[((index % n) + n) % n]!);
+  };
+  scenarioSelect.addEventListener("change", () => {
+    selectScenarioAt(DEMO_SCENARIOS_3D.findIndex((s) => s.id === scenarioSelect.value));
+  });
+  document.getElementById("btn-scenario-prev")!.addEventListener("click", () => {
+    selectScenarioAt(DEMO_SCENARIOS_3D.indexOf(currentScenario3D) - 1);
+  });
+  document.getElementById("btn-scenario-next")!.addEventListener("click", () => {
+    selectScenarioAt(DEMO_SCENARIOS_3D.indexOf(currentScenario3D) + 1);
+  });
+
   const example3DListEl = document.getElementById("example-3d-list")!;
   function render3DPresetList(): void {
     example3DListEl.innerHTML = "";
@@ -187,7 +234,7 @@ function setupUI(): void {
         : DEMO_SCENARIOS_3D.filter((s) => s.category === current3DCategoryFilter);
     const badgeCountEl = document.getElementById("badge-3d-count");
     if (badgeCountEl) {
-      badgeCountEl.textContent = `${filtered.length} presets`;
+      badgeCountEl.textContent = String(filtered.length);
     }
     for (const s3d of filtered) {
       const card = document.createElement("button");
@@ -200,22 +247,7 @@ function setupUI(): void {
         </div>
         <div class="example-summary">${s3d.description}</div>
       `;
-      card.addEventListener("click", () => {
-        currentScenario3D = s3d;
-        currentOp = s3d.defaultOp;
-        transform3D = {
-          dx: 0,
-          dy: 0,
-          dz: 0,
-          rxDeg: 0,
-          ryDeg: 0,
-          rotDeg: 0,
-          detailScale: transform3D.detailScale,
-        };
-        sync3DTransformSliders();
-        syncControlsFromState();
-        recomputeAndRender();
-      });
+      card.addEventListener("click", () => select3DScenario(s3d));
       example3DListEl.appendChild(card);
     }
   }
@@ -380,10 +412,38 @@ function setupUI(): void {
     if (e.code === "Space") spacePressed = false;
   });
 
-  canvas.addEventListener("mousedown", (e) => {
+  // Viewport pointer interactions: orbit, pan (shift / middle / space), wheel or pinch zoom.
+  const activePointers = new Map<number, { x: number; y: number }>();
+  let pinch: { dist: number; midX: number; midY: number } | null = null;
+
+  const pinchState = () => {
+    const [a, b] = [...activePointers.values()] as [{ x: number; y: number }, { x: number; y: number }];
+    return {
+      dist: Math.max(1, Math.hypot(a.x - b.x, a.y - b.y)),
+      midX: 0.5 * (a.x + b.x),
+      midY: 0.5 * (a.y + b.y),
+    };
+  };
+
+  const zoomBy = (factor: number) => {
+    cam3D.distance = Math.max(8, Math.min(120, cam3D.distance * factor));
+  };
+
+  canvas.addEventListener("pointerdown", (e) => {
     const rect = canvas.getBoundingClientRect();
     const sx = e.clientX - rect.left;
     const sy = e.clientY - rect.top;
+    activePointers.set(e.pointerId, { x: sx, y: sy });
+    canvas.setPointerCapture(e.pointerId);
+
+    if (activePointers.size === 2) {
+      // A second finger switches from orbit to pinch-zoom + pan.
+      drag3D = null;
+      pinch = pinchState();
+      return;
+    }
+    if (activePointers.size > 2) return;
+
     drag3D = {
       mode: e.button === 1 || e.shiftKey || spacePressed ? "pan" : "orbit",
       lastX: sx,
@@ -392,11 +452,24 @@ function setupUI(): void {
     canvas.style.cursor = "grabbing";
   });
 
-  window.addEventListener("mousemove", (e) => {
-    if (!drag3D) return;
+  canvas.addEventListener("pointermove", (e) => {
+    if (!activePointers.has(e.pointerId)) return;
     const rect = canvas.getBoundingClientRect();
     const sx = e.clientX - rect.left;
     const sy = e.clientY - rect.top;
+    activePointers.set(e.pointerId, { x: sx, y: sy });
+
+    if (pinch && activePointers.size >= 2) {
+      const next = pinchState();
+      zoomBy(pinch.dist / next.dist);
+      cam3D.panX += next.midX - pinch.midX;
+      cam3D.panY += next.midY - pinch.midY;
+      pinch = next;
+      renderCanvas();
+      return;
+    }
+
+    if (!drag3D) return;
     const dx = sx - drag3D.lastX;
     const dy = sy - drag3D.lastY;
     drag3D.lastX = sx;
@@ -412,26 +485,31 @@ function setupUI(): void {
     renderCanvas();
   });
 
-  window.addEventListener("mouseup", () => {
+  const endPointer = (e: PointerEvent) => {
+    activePointers.delete(e.pointerId);
+    if (activePointers.size < 2) pinch = null;
     drag3D = null;
     canvas.style.cursor = "grab";
-  });
+  };
+  canvas.addEventListener("pointerup", endPointer);
+  canvas.addEventListener("pointercancel", endPointer);
 
   canvas.addEventListener(
     "wheel",
     (e) => {
       e.preventDefault();
-      const factor = Math.exp(e.deltaY * 0.0012);
-      cam3D.distance = Math.max(8, Math.min(120, cam3D.distance * factor));
+      zoomBy(Math.exp(e.deltaY * 0.0012));
       renderCanvas();
     },
     { passive: false },
   );
 
-  window.addEventListener("resize", resizeCanvas);
+  new ResizeObserver(() => resizeCanvas()).observe(canvas.parentElement!);
 }
 
 async function boot(): Promise<void> {
+  initTheme();
+  onThemeChange(renderCanvas);
   await initPolystrata3D();
   setupUI();
   syncControlsFromState();

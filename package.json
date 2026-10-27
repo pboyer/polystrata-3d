@@ -64,6 +64,7 @@
     "@jscad/modeling": "^2.13.0",
     "@types/node": "^26.6.5",
     "@types/three": "^0.186.0",
+    "lucide": "^1.62.0",
     "manifold-3d": "^3.5.4",
     "three": "^0.186.1",
     "three-bvh-csg": "^0.0.18",
